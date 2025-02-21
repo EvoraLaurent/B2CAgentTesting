@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My GitHub Page</title>
-    <!-- Add CSP header to allow Salesforce domains -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://jpw--agentforce.sandbox.my.site.com https://jpw--agentforce.sandbox.my.salesforce-scrt.com; script-src 'self' 'unsafe-inline' https://jpw--agentforce.sandbox.my.site.com https://jpw--agentforce.sandbox.my.salesforce-scrt.com; connect-src 'self' https://jpw--agentforce.sandbox.my.site.com https://jpw--agentforce.sandbox.my.salesforce-scrt.com;">
+    <!-- Add CSP headers that match Salesforce's requirements -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' www.jpwindustries.com *.www.jpwindustries.com jpw--agentforce--c.sandbox.vf.force.com https://stage.jettools.com https://jpw-catalog-qa-b2c-6.corevist.cloud connectc.jpwindustries.com *.connectc.jpwindustries.com jpw-catalog-qa-b2c-6.corevist.cloud *.jettools.com *.corevist.cloud">
 </head>
 <body>
     <h1>Welcome to My GitHub Page</h1>
@@ -13,12 +13,21 @@
     <script type='text/javascript'>
     function initEmbeddedMessaging() {
         try {
-            // Add error handling and logging
-            if (typeof embeddedservice_bootstrap === 'undefined') {
-                console.error('Embedded service bootstrap not loaded');
+            // Add check for domain compatibility
+            const currentDomain = window.location.hostname;
+            const allowedDomains = [
+                'www.jpwindustries.com',
+                'stage.jettools.com',
+                'jpw-catalog-qa-b2c-6.corevist.cloud',
+                'connectc.jpwindustries.com'
+                // Add other allowed domains as needed
+            ];
+
+            if (!allowedDomains.some(domain => currentDomain.endsWith(domain))) {
+                console.error('Domain not authorized to embed Salesforce content');
                 return;
             }
-            
+
             embeddedservice_bootstrap.settings.language = 'en_US';
             
             embeddedservice_bootstrap.init(
@@ -31,6 +40,11 @@
             );
         } catch (err) {
             console.error('Error loading Embedded Messaging: ', err);
+            // Add visible error message for users
+            const errorDiv = document.createElement('div');
+            errorDiv.style.color = 'red';
+            errorDiv.innerHTML = 'Unable to load messaging service. Please try again later.';
+            document.body.appendChild(errorDiv);
         }
     }
     </script>

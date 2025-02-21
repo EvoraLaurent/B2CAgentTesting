@@ -4,47 +4,124 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>B2C Agent Testing</title>
+    <style>
+        .status-box {
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f8f9fa;
+        }
+        .error { 
+            color: #dc3545;
+            background-color: #fff5f5;
+        }
+        .success { 
+            color: #28a745;
+            background-color: #f0fff4;
+        }
+        .debug-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
     <h1>B2C Agent Testing</h1>
-    <div id="status-message" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
-    <div id="script-status" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
-    <div id="cors-status" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
+    <div id="status-message" class="status-box"></div>
+    <div id="cors-status" class="status-box"></div>
+    <div id="debug-info" class="status-box debug-info"></div>
 
     <script type="text/javascript">
+    const DEBUG = true;
+    const SALESFORCE_DOMAIN = 'https://jpw--agentforce.sandbox.my.site.com';
+    const BOOTSTRAP_PATH = '/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+
+    function logDebug(info) {
+        const debugDiv = document.getElementById('debug-info');
+        const timestamp = new Date().toISOString();
+        debugDiv.innerHTML += `${timestamp}: ${JSON.stringify(info, null, 2)}\n`;
+    }
+
     function logStatus(message, isError = false) {
         const timestamp = new Date().toISOString();
         console.log(`${timestamp}: ${message}`);
         const statusDiv = document.getElementById('status-message');
         if (statusDiv) {
-            statusDiv.style.color = isError ? 'red' : 'green';
+            statusDiv.className = `status-box ${isError ? 'error' : 'success'}`;
             statusDiv.innerHTML = `${timestamp}: ${message}`;
         }
     }
 
+    function checkEndpointStatus() {
+        logStatus('Checking Salesforce endpoint accessibility...');
+        
+        // Try a CORS preflight check
+        fetch(`${SALESFORCE_DOMAIN}${BOOTSTRAP_PATH}`, {
+            method: 'OPTIONS',
+            headers: {
+                'Origin': window.location.origin,
+                'Access-Control-Request-Method': 'GET',
+                'Access-Control-Request-Headers': 'Content-Type'
+            }
+        })
+        .then(response => {
+            logDebug({
+                type: 'CORS Preflight Response',
+                status: response.status,
+                headers: Array.from(response.headers.entries())
+            });
+        })
+        .catch(error => {
+            logDebug({
+                type: 'CORS Preflight Error',
+                error: error.message
+            });
+        });
+    }
+
     function loadBootstrapScript() {
-        logStatus('Attempting to load bootstrap script directly...');
+        logStatus('Attempting to load bootstrap script...');
+        
+        // Display current configuration
+        document.getElementById('cors-status').innerHTML = `
+            <strong>Configuration Details:</strong><br>
+            Current time: ${new Date().toISOString()}<br>
+            Your domain: ${window.location.origin}<br>
+            Target Salesforce domain: ${SALESFORCE_DOMAIN}<br>
+            User Agent: ${navigator.userAgent}<br>
+            <br>
+            <strong>Required CORS Settings in Salesforce:</strong><br>
+            1. CORS Allowed Origin: ${window.location.origin}<br>
+            2. CSP Trusted Sites should include: ${window.location.origin}<br>
+            3. Verify no trailing slashes in the entries<br>
+            4. Verify entries are marked as Active
+        `;
+
         const script = document.createElement('script');
         script.type = 'text/javascript';
-        script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
-        script.crossOrigin = 'anonymous'; // Add crossOrigin attribute
+        script.src = `${SALESFORCE_DOMAIN}${BOOTSTRAP_PATH}`;
+        script.crossOrigin = 'anonymous';
         
         script.onload = function() {
             logStatus('Bootstrap script loaded successfully');
-            document.getElementById('cors-status').innerHTML = 'Script loaded successfully';
+            logDebug({
+                type: 'Script Load Success',
+                timestamp: new Date().toISOString()
+            });
             initEmbeddedMessaging();
         };
         
         script.onerror = function(error) {
-            logStatus('Script loading error occurred', true);
-            document.getElementById('cors-status').innerHTML = 
-                `Current time: ${new Date().toISOString()}<br>
-                 Origin: ${window.location.origin}<br>
-                 CORS Error: Unable to load the Salesforce script.<br>
-                 Please verify these Salesforce settings:<br>
-                 1. CORS Allowed Origins includes: ${window.location.origin}<br>
-                 2. CSP Trusted Sites includes: ${window.location.origin}<br>
-                 Note: Changes may take 5-10 minutes to propagate.`;
+            logStatus('Failed to load bootstrap script', true);
+            logDebug({
+                type: 'Script Load Error',
+                error: error,
+                timestamp: new Date().toISOString()
+            });
         };
         
         document.body.appendChild(script);
@@ -52,8 +129,6 @@
 
     function initEmbeddedMessaging() {
         try {
-            logStatus('Initializing Embedded Messaging...');
-
             if (!window.embeddedservice_bootstrap) {
                 throw new Error('Embedded service bootstrap not loaded');
             }
@@ -63,48 +138,39 @@
             embeddedservice_bootstrap.init(
                 '00DcX000001g9cb',
                 'B2C_Agent',
-                'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
+                `${SALESFORCE_DOMAIN}/ESWB2CAgent1737056033633`,
                 {
                     scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
                     onInit: function(err, bootstrapResponse) {
                         if (err) {
                             logStatus('Initialization Error: ' + err.message, true);
+                            logDebug({
+                                type: 'Init Error',
+                                error: err
+                            });
                         } else {
                             logStatus('Successfully initialized');
+                            logDebug({
+                                type: 'Init Success',
+                                response: bootstrapResponse
+                            });
                         }
                     }
                 }
             );
         } catch (err) {
             logStatus('Setup Error: ' + err.message, true);
+            logDebug({
+                type: 'Setup Error',
+                error: err.message
+            });
         }
     }
 
-    // Start loading process
+    // Start the process
     window.onload = function() {
-        // Display current configuration
-        document.getElementById('cors-status').innerHTML = 
-            `Checking CORS configuration...<br>
-             Current time: ${new Date().toISOString()}<br>
-             Your domain: ${window.location.origin}<br>
-             Target Salesforce domain: https://jpw--agentforce.sandbox.my.site.com`;
-        
-        // Attempt to load the script
+        checkEndpointStatus();
         loadBootstrapScript();
-    };
-
-    // Global error handler
-    window.onerror = function(msg, url, lineNo, columnNo, error) {
-        logStatus(`Global Error: ${msg}`, true);
-        console.error('Global Error Details:', {
-            message: msg,
-            url: url,
-            lineNo: lineNo,
-            columnNo: columnNo,
-            error: error,
-            timestamp: new Date().toISOString()
-        });
-        return false;
     };
     </script>
 </body>

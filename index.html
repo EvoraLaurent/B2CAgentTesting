@@ -4,22 +4,52 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>B2C Agent Testing</title>
-    <!-- Add meta tags for security -->
-    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://jpw--agentforce.sandbox.my.site.com">
-    <meta http-equiv="X-Frame-Options" content="ALLOW-FROM https://jpw--agentforce.sandbox.my.site.com">
 </head>
 <body>
-    <h1>B2C Agent Testing Page</h1>
-    <div id="status-message"></div>
-    
-    <script type='text/javascript'>
+    <h1>B2C Agent Testing</h1>
+    <div id="status-message" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
+    <div id="script-status" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
+
+    <script type="text/javascript">
+    // Utility function for logging
+    function logStatus(message, isError = false) {
+        const timestamp = new Date().toISOString();
+        console.log(`${timestamp}: ${message}`);
+        const statusDiv = document.getElementById('status-message');
+        if (statusDiv) {
+            statusDiv.style.color = isError ? 'red' : 'green';
+            statusDiv.innerHTML = `${timestamp}: ${message}`;
+        }
+    }
+
+    // Test the Salesforce endpoint before loading the script
+    function testEndpoint() {
+        logStatus('Testing Salesforce endpoint connection...');
+        
+        fetch('https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js', {
+            method: 'HEAD',
+            mode: 'cors'
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            logStatus('Endpoint test successful');
+            loadBootstrapScript();
+        })
+        .catch(error => {
+            logStatus(`Endpoint test failed: ${error.message}`, true);
+            document.getElementById('script-status').innerHTML = 
+                `Connection Error: ${error.message}. Please check CORS settings.`;
+        });
+    }
+
     function initEmbeddedMessaging() {
         try {
+            logStatus('Initializing Embedded Messaging...');
+
             if (!window.embeddedservice_bootstrap) {
-                console.error('Embedded service bootstrap not loaded');
-                document.getElementById('status-message').innerHTML = 
-                    'Error: Embedded service bootstrap not loaded';
-                return;
+                throw new Error('Embedded service bootstrap not loaded');
             }
 
             embeddedservice_bootstrap.settings.language = 'en_US';
@@ -32,32 +62,47 @@
                     scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
                     onInit: function(err, bootstrapResponse) {
                         if (err) {
-                            console.error('Embedded Messaging initialization error:', err);
-                            document.getElementById('status-message').innerHTML = 
-                                'Unable to load messaging service: ' + err.message;
+                            logStatus('Initialization Error: ' + err.message, true);
                         } else {
-                            console.log('Embedded Messaging initialized successfully');
-                            document.getElementById('status-message').innerHTML = 
-                                'Messaging service loaded successfully';
+                            logStatus('Successfully initialized');
                         }
                     }
                 }
             );
         } catch (err) {
-            console.error('Error in initEmbeddedMessaging:', err);
-            document.getElementById('status-message').innerHTML = 
-                'Error initializing messaging service: ' + err.message;
+            logStatus('Setup Error: ' + err.message, true);
         }
     }
-    </script>
-    <script type='text/javascript' 
-            src='https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js' 
-            onload='initEmbeddedMessaging()'
-            onerror='function(error) { 
-                console.error("Failed to load bootstrap script:", error);
-                document.getElementById("status-message").innerHTML = 
-                    "Failed to load messaging service script";
-            }'>
+
+    function loadBootstrapScript() {
+        logStatus('Loading bootstrap script...');
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+        script.onload = function() {
+            logStatus('Bootstrap script loaded successfully');
+            initEmbeddedMessaging();
+        };
+        script.onerror = function(error) {
+            logStatus('Failed to load bootstrap script', true);
+            console.error('Script loading error:', error);
+            document.getElementById('script-status').innerHTML = 
+                'Failed to load bootstrap script. Check browser console for details.';
+        };
+        document.body.appendChild(script);
+    }
+
+    // Start the process
+    window.onload = function() {
+        testEndpoint();
+    };
+
+    // Global error handler
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+        logStatus(`Global Error: ${msg}`, true);
+        console.error('Global Error:', { msg, url, lineNo, columnNo, error });
+        return false;
+    };
     </script>
 </body>
 </html>

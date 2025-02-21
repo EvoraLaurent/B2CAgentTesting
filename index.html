@@ -3,28 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My GitHub Page</title>
-    <!-- Add CSP headers that match Salesforce's requirements -->
-    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' www.jpwindustries.com *.www.jpwindustries.com jpw--agentforce--c.sandbox.vf.force.com https://stage.jettools.com https://jpw-catalog-qa-b2c-6.corevist.cloud connectc.jpwindustries.com *.connectc.jpwindustries.com jpw-catalog-qa-b2c-6.corevist.cloud *.jettools.com *.corevist.cloud">
+    <title>B2C Agent Testing</title>
+    <!-- Add meta tags for security -->
+    <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self' https://jpw--agentforce.sandbox.my.site.com">
+    <meta http-equiv="X-Frame-Options" content="ALLOW-FROM https://jpw--agentforce.sandbox.my.site.com">
 </head>
 <body>
-    <h1>Welcome to My GitHub Page</h1>
-    <p>This is a sample page with a script.</p>
+    <h1>B2C Agent Testing Page</h1>
+    <div id="status-message"></div>
+    
     <script type='text/javascript'>
     function initEmbeddedMessaging() {
         try {
-            // Add check for domain compatibility
-            const currentDomain = window.location.hostname;
-            const allowedDomains = [
-                'www.jpwindustries.com',
-                'stage.jettools.com',
-                'jpw-catalog-qa-b2c-6.corevist.cloud',
-                'connectc.jpwindustries.com'
-                // Add other allowed domains as needed
-            ];
-
-            if (!allowedDomains.some(domain => currentDomain.endsWith(domain))) {
-                console.error('Domain not authorized to embed Salesforce content');
+            if (!window.embeddedservice_bootstrap) {
+                console.error('Embedded service bootstrap not loaded');
+                document.getElementById('status-message').innerHTML = 
+                    'Error: Embedded service bootstrap not loaded';
                 return;
             }
 
@@ -35,19 +29,35 @@
                 'B2C_Agent',
                 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
                 {
-                    scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com'
+                    scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
+                    onInit: function(err, bootstrapResponse) {
+                        if (err) {
+                            console.error('Embedded Messaging initialization error:', err);
+                            document.getElementById('status-message').innerHTML = 
+                                'Unable to load messaging service: ' + err.message;
+                        } else {
+                            console.log('Embedded Messaging initialized successfully');
+                            document.getElementById('status-message').innerHTML = 
+                                'Messaging service loaded successfully';
+                        }
+                    }
                 }
             );
         } catch (err) {
-            console.error('Error loading Embedded Messaging: ', err);
-            // Add visible error message for users
-            const errorDiv = document.createElement('div');
-            errorDiv.style.color = 'red';
-            errorDiv.innerHTML = 'Unable to load messaging service. Please try again later.';
-            document.body.appendChild(errorDiv);
+            console.error('Error in initEmbeddedMessaging:', err);
+            document.getElementById('status-message').innerHTML = 
+                'Error initializing messaging service: ' + err.message;
         }
     }
     </script>
-    <script type='text/javascript' src='https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
+    <script type='text/javascript' 
+            src='https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js' 
+            onload='initEmbeddedMessaging()'
+            onerror='function(error) { 
+                console.error("Failed to load bootstrap script:", error);
+                document.getElementById("status-message").innerHTML = 
+                    "Failed to load messaging service script";
+            }'>
+    </script>
 </body>
 </html>

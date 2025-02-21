@@ -9,9 +9,9 @@
     <h1>B2C Agent Testing</h1>
     <div id="status-message" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
     <div id="script-status" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
+    <div id="cors-status" style="padding: 10px; margin: 10px 0; border: 1px solid #ccc;"></div>
 
     <script type="text/javascript">
-    // Utility function for logging
     function logStatus(message, isError = false) {
         const timestamp = new Date().toISOString();
         console.log(`${timestamp}: ${message}`);
@@ -22,26 +22,32 @@
         }
     }
 
-    // Test the Salesforce endpoint before loading the script
-    function testEndpoint() {
-        logStatus('Testing Salesforce endpoint connection...');
+    function loadBootstrapScript() {
+        logStatus('Attempting to load bootstrap script directly...');
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+        script.crossOrigin = 'anonymous'; // Add crossOrigin attribute
         
-        fetch('https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js', {
-            method: 'HEAD',
-            mode: 'cors'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            logStatus('Endpoint test successful');
-            loadBootstrapScript();
-        })
-        .catch(error => {
-            logStatus(`Endpoint test failed: ${error.message}`, true);
-            document.getElementById('script-status').innerHTML = 
-                `Connection Error: ${error.message}. Please check CORS settings.`;
-        });
+        script.onload = function() {
+            logStatus('Bootstrap script loaded successfully');
+            document.getElementById('cors-status').innerHTML = 'Script loaded successfully';
+            initEmbeddedMessaging();
+        };
+        
+        script.onerror = function(error) {
+            logStatus('Script loading error occurred', true);
+            document.getElementById('cors-status').innerHTML = 
+                `Current time: ${new Date().toISOString()}<br>
+                 Origin: ${window.location.origin}<br>
+                 CORS Error: Unable to load the Salesforce script.<br>
+                 Please verify these Salesforce settings:<br>
+                 1. CORS Allowed Origins includes: ${window.location.origin}<br>
+                 2. CSP Trusted Sites includes: ${window.location.origin}<br>
+                 Note: Changes may take 5-10 minutes to propagate.`;
+        };
+        
+        document.body.appendChild(script);
     }
 
     function initEmbeddedMessaging() {
@@ -74,33 +80,30 @@
         }
     }
 
-    function loadBootstrapScript() {
-        logStatus('Loading bootstrap script...');
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
-        script.onload = function() {
-            logStatus('Bootstrap script loaded successfully');
-            initEmbeddedMessaging();
-        };
-        script.onerror = function(error) {
-            logStatus('Failed to load bootstrap script', true);
-            console.error('Script loading error:', error);
-            document.getElementById('script-status').innerHTML = 
-                'Failed to load bootstrap script. Check browser console for details.';
-        };
-        document.body.appendChild(script);
-    }
-
-    // Start the process
+    // Start loading process
     window.onload = function() {
-        testEndpoint();
+        // Display current configuration
+        document.getElementById('cors-status').innerHTML = 
+            `Checking CORS configuration...<br>
+             Current time: ${new Date().toISOString()}<br>
+             Your domain: ${window.location.origin}<br>
+             Target Salesforce domain: https://jpw--agentforce.sandbox.my.site.com`;
+        
+        // Attempt to load the script
+        loadBootstrapScript();
     };
 
     // Global error handler
     window.onerror = function(msg, url, lineNo, columnNo, error) {
         logStatus(`Global Error: ${msg}`, true);
-        console.error('Global Error:', { msg, url, lineNo, columnNo, error });
+        console.error('Global Error Details:', {
+            message: msg,
+            url: url,
+            lineNo: lineNo,
+            columnNo: columnNo,
+            error: error,
+            timestamp: new Date().toISOString()
+        });
         return false;
     };
     </script>

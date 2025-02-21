@@ -3,132 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B2C Agent Testing</title>
+    <title>B2C Agent Testing - IFrame Implementation</title>
     <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
         .status-box {
-            padding: 10px;
+            padding: 15px;
             margin: 10px 0;
             border: 1px solid #ccc;
             border-radius: 4px;
             background-color: #f8f9fa;
         }
-        .error { 
-            color: #dc3545;
-            background-color: #fff5f5;
+        .iframe-container {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 20px;
         }
-        .success { 
-            color: #28a745;
-            background-color: #f0fff4;
-        }
-        .info { 
-            color: #0d6efd;
-            background-color: #f8f9fa;
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
         }
     </style>
 </head>
 <body>
-    <h1>B2C Agent Testing</h1>
-    <div id="config-info" class="status-box info">
-        <strong>Current Configuration</strong><br>
-        Time: <span id="current-time"></span><br>
-        Origin: <span id="origin"></span><br>
-        User: DominoAD
+    <div class="container">
+        <h1>B2C Agent Testing - IFrame Implementation</h1>
+        <div class="status-box">
+            <strong>Configuration Info</strong><br>
+            Time: <span id="current-time"></span><br>
+            User: DominoAD
+        </div>
+        
+        <div class="iframe-container">
+            <iframe id="salesforce-frame" 
+                    src="about:blank" 
+                    allow="camera *; microphone *; autoplay *"
+                    sandbox="allow-same-origin allow-scripts allow-forms allow-popups">
+            </iframe>
+        </div>
     </div>
-    <div id="status-message" class="status-box"></div>
-    <div id="cors-debug" class="status-box" style="white-space: pre-wrap; font-family: monospace;"></div>
 
-    <script type="text/javascript">
-    const CONFIG = {
-        SALESFORCE_DOMAIN: 'https://jpw--agentforce.sandbox.my.site.com',
-        BOOTSTRAP_PATH: '/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js',
-        ORIGIN: window.location.origin.replace(/\/$/, '') // Remove trailing slash if present
-    };
+    <script>
+    // Update time
+    document.getElementById('current-time').textContent = 
+        new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
 
-    function updateDateTime() {
-        const now = new Date();
-        document.getElementById('current-time').textContent = 
-            now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-        document.getElementById('origin').textContent = CONFIG.ORIGIN;
-    }
+    // Create the content for the iframe
+    const iframeContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Salesforce Chat Frame</title>
+            <style>
+                body { margin: 0; padding: 20px; font-family: sans-serif; }
+                #status-message { 
+                    padding: 10px; 
+                    margin: 10px 0; 
+                    border-radius: 4px; 
+                }
+                .error { background: #fff5f5; color: #dc3545; }
+                .success { background: #f0fff4; color: #28a745; }
+            </style>
+        </head>
+        <body>
+            <div id="status-message"></div>
+            <div id="embedded-messaging"></div>
 
-    function logStatus(message, type = 'info') {
-        const timestamp = new Date().toISOString();
-        console.log(`${timestamp}: ${message}`);
-        const statusDiv = document.getElementById('status-message');
-        if (statusDiv) {
-            statusDiv.className = `status-box ${type}`;
-            statusDiv.innerHTML = `${timestamp}: ${message}`;
-        }
-    }
-
-    function loadBootstrapScript() {
-        logStatus('Attempting to load Salesforce bootstrap script...', 'info');
-        
-        document.getElementById('cors-debug').textContent = 
-            `Loading script from:\n${CONFIG.SALESFORCE_DOMAIN}${CONFIG.BOOTSTRAP_PATH}\n\n` +
-            `Required CORS configuration in Salesforce:\n` +
-            `1. Setup → CORS\n` +
-            `   Origin: ${CONFIG.ORIGIN}\n` +
-            `   Status: Active\n\n` +
-            `2. Setup → CSP Trusted Sites\n` +
-            `   URL: ${CONFIG.ORIGIN}\n` +
-            `   All checkboxes should be selected`;
-
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = `${CONFIG.SALESFORCE_DOMAIN}${CONFIG.BOOTSTRAP_PATH}`;
-        script.crossOrigin = 'anonymous';
-        
-        script.onload = function() {
-            logStatus('Bootstrap script loaded successfully', 'success');
-            initEmbeddedMessaging();
-        };
-        
-        script.onerror = function(error) {
-            logStatus('Failed to load Salesforce script', 'error');
-            document.getElementById('cors-debug').textContent += '\n\nError Details:\n' +
-                '- CORS policy blocking script load\n' +
-                '- Check Salesforce CORS and CSP settings\n' +
-                '- Verify exact origin match without trailing slash\n' +
-                '- Clear browser cache and try in incognito mode';
-        };
-        
-        document.body.appendChild(script);
-    }
-
-    function initEmbeddedMessaging() {
-        try {
-            if (!window.embeddedservice_bootstrap) {
-                throw new Error('Bootstrap not loaded');
+            <script type="text/javascript">
+            function logStatus(message, isError = false) {
+                const statusDiv = document.getElementById('status-message');
+                statusDiv.className = isError ? 'error' : 'success';
+                statusDiv.textContent = message;
+                console.log(message);
             }
 
-            embeddedservice_bootstrap.settings.language = 'en_US';
-            
-            embeddedservice_bootstrap.init(
-                '00DcX000001g9cb',
-                'B2C_Agent',
-                `${CONFIG.SALESFORCE_DOMAIN}/ESWB2CAgent1737056033633`,
-                {
-                    scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
-                    onInit: function(err, bootstrapResponse) {
-                        if (err) {
-                            logStatus('Initialization Error: ' + err.message, 'error');
-                        } else {
-                            logStatus('Successfully initialized messaging', 'success');
-                        }
+            function initEmbeddedMessaging() {
+                try {
+                    logStatus('Initializing messaging...');
+                    
+                    if (!window.embeddedservice_bootstrap) {
+                        throw new Error('Bootstrap not loaded');
                     }
-                }
-            );
-        } catch (err) {
-            logStatus('Setup Error: ' + err.message, 'error');
-        }
-    }
 
-    // Start the process
-    window.onload = function() {
-        updateDateTime();
-        loadBootstrapScript();
+                    embeddedservice_bootstrap.settings.language = 'en_US';
+                    
+                    embeddedservice_bootstrap.init(
+                        '00DcX000001g9cb',
+                        'B2C_Agent',
+                        'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
+                        {
+                            scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
+                            onInit: function(err, bootstrapResponse) {
+                                if (err) {
+                                    logStatus('Initialization Error: ' + err.message, true);
+                                } else {
+                                    logStatus('Successfully initialized');
+                                }
+                            }
+                        }
+                    );
+                } catch (err) {
+                    logStatus('Setup Error: ' + err.message, true);
+                }
+            }
+
+            // Load the bootstrap script
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+            script.onload = initEmbeddedMessaging;
+            script.onerror = () => logStatus('Failed to load Salesforce script', true);
+            document.body.appendChild(script);
+            </script>
+        </body>
+        </html>
+    `;
+
+    // Set the iframe content
+    const iframe = document.getElementById('salesforce-frame');
+    iframe.onload = function() {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(iframeContent);
+        doc.close();
     };
+    iframe.src = 'about:blank';
     </script>
 </body>
 </html>

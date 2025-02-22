@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Frame</title>
+    <style>
+        body { 
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        #status-message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .error { color: #dc3545; }
+        .success { color: #28a745; }
+    </style>
+</head>
+<body>
+    <div id="status-message"></div>
+    <div id="embedded-messaging"></div>
+
+    <script>
+        function updateStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = isError ? 'error' : 'success';
+            statusDiv.textContent = message;
+        }
+
+        function loadSalesforceScript() {
+            updateStatus('Loading Salesforce script...');
+            
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+            
+            script.onload = function() {
+                updateStatus('Script loaded, initializing...');
+                initEmbeddedMessaging();
+            };
+            
+            script.onerror = function() {
+                updateStatus('Failed to load Salesforce script', true);
+            };
+            
+            document.body.appendChild(script);
+        }
+
+        function initEmbeddedMessaging() {
+            try {
+                if (!window.embeddedservice_bootstrap) {
+                    throw new Error('Embedded service bootstrap not loaded');
+                }
+
+                embeddedservice_bootstrap.settings.language = 'en_US';
+                
+                embeddedservice_bootstrap.init(
+                    '00DcX000001g9cb',
+                    'B2C_Agent',
+                    'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
+                    {
+                        scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
+                        onInit: function(err, bootstrapResponse) {
+                            if (err) {
+                                updateStatus('Initialization Error: ' + err.message, true);
+                            } else {
+                                updateStatus('Successfully initialized');
+                            }
+                        }
+                    }
+                );
+            } catch (err) {
+                updateStatus('Setup Error: ' + err.message, true);
+            }
+        }
+
+        // Start the initialization process
+        window.onload = loadSalesforceScript;
+    </script>
+</body>
+</html>

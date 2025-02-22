@@ -2,56 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B2C Agent Testing</title>
+    <title>Chat Frame</title>
     <style>
-        body {
-            font-family: sans-serif;
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 20px;
-            padding: 0;
+            line-height: 1.6;
         }
-        .status-box {
+        #status-message {
             padding: 10px;
             margin: 10px 0;
-            border: 1px solid #ccc;
             border-radius: 4px;
             background: #f8f9fa;
         }
-        .chat-container {
-            width: 100%;
-            max-width: 1200px;
-            height: 600px;
-            margin: 20px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        .error { 
+            color: #dc3545; 
+            background: #fff5f5;
+        }
+        .success { 
+            color: #28a745; 
+            background: #f0fff4;
         }
     </style>
 </head>
 <body>
-    <div class="status-box">
-        <strong>Status:</strong> <span id="status">Initializing...</span><br>
-        <strong>Time:</strong> <span id="current-time"></span><br>
-        <strong>User:</strong> DominoAD
-    </div>
-
-    <div class="chat-container">
-        <iframe 
-            id="chat-frame"
-            style="width: 100%; height: 100%; border: none;"
-            sandbox="allow-scripts allow-forms allow-popups"
-            src="chat.html"
-        ></iframe>
-    </div>
+    <div id="status-message"></div>
+    <div id="embedded-messaging"></div>
 
     <script>
-        // Update time display
-        document.getElementById('current-time').textContent = 
-            new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+        // Status update function
+        function updateStatus(message, isError = false) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = isError ? 'error' : 'success';
+            statusDiv.textContent = message;
+            console.log(message);
+        }
 
-        // Update status when iframe loads
-        document.getElementById('chat-frame').onload = function() {
-            document.getElementById('status').textContent = 'Chat frame loaded';
-        };
+        // Load Salesforce script
+        function loadSalesforceScript() {
+            updateStatus('Loading Salesforce script...');
+            
+            const script = document.createElement('script');
+            script.type = 'text/javascript';
+            script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
+            
+            script.onload = function() {
+                updateStatus('Script loaded successfully');
+                initEmbeddedMessaging();
+            };
+            
+            script.onerror = function(error) {
+                updateStatus('Failed to load Salesforce script: ' + error, true);
+            };
+            
+            document.body.appendChild(script);
+        }
+
+        // Initialize embedded messaging
+        function initEmbeddedMessaging() {
+            try {
+                if (!window.embeddedservice_bootstrap) {
+                    throw new Error('Embedded service bootstrap not loaded');
+                }
+
+                embeddedservice_bootstrap.settings.language = 'en_US';
+                
+                embeddedservice_bootstrap.init(
+                    '00DcX000001g9cb',
+                    'B2C_Agent',
+                    'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
+                    {
+                        scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
+                        onInit: function(err, bootstrapResponse) {
+                            if (err) {
+                                updateStatus('Initialization Error: ' + err.message, true);
+                            } else {
+                                updateStatus('Successfully initialized messaging');
+                            }
+                        }
+                    }
+                );
+            } catch (err) {
+                updateStatus('Setup Error: ' + err.message, true);
+            }
+        }
+
+        // Start the initialization process when the page loads
+        window.onload = loadSalesforceScript;
     </script>
 </body>
 </html>

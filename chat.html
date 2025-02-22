@@ -1,82 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Frame</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B2C Agent Testing</title>
     <style>
-        body { 
+        body {
             font-family: sans-serif;
             margin: 20px;
+            padding: 0;
         }
-        #status-message {
+        .status-box {
             padding: 10px;
             margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background: #f8f9fa;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
             border-radius: 4px;
         }
-        .error { color: #dc3545; }
-        .success { color: #28a745; }
     </style>
 </head>
 <body>
-    <div id="status-message"></div>
-    <div id="embedded-messaging"></div>
+    <div class="status-box">
+        <strong>Status:</strong> <span id="status">Initializing...</span><br>
+        <strong>Time:</strong> <span id="current-time"></span><br>
+        <strong>User:</strong> DominoAD
+    </div>
+
+    <div class="chat-container">
+        <iframe 
+            id="chat-frame"
+            style="width: 100%; height: 100%; border: none;"
+            sandbox="allow-scripts allow-forms allow-popups"
+            src="chat.html"
+        ></iframe>
+    </div>
 
     <script>
-        function updateStatus(message, isError = false) {
-            const statusDiv = document.getElementById('status-message');
-            statusDiv.className = isError ? 'error' : 'success';
-            statusDiv.textContent = message;
-        }
+        // Update time display
+        document.getElementById('current-time').textContent = 
+            new Date().toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
 
-        function loadSalesforceScript() {
-            updateStatus('Loading Salesforce script...');
-            
-            const script = document.createElement('script');
-            script.type = 'text/javascript';
-            script.src = 'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633/assets/js/bootstrap.min.js';
-            
-            script.onload = function() {
-                updateStatus('Script loaded, initializing...');
-                initEmbeddedMessaging();
-            };
-            
-            script.onerror = function() {
-                updateStatus('Failed to load Salesforce script', true);
-            };
-            
-            document.body.appendChild(script);
-        }
-
-        function initEmbeddedMessaging() {
-            try {
-                if (!window.embeddedservice_bootstrap) {
-                    throw new Error('Embedded service bootstrap not loaded');
-                }
-
-                embeddedservice_bootstrap.settings.language = 'en_US';
-                
-                embeddedservice_bootstrap.init(
-                    '00DcX000001g9cb',
-                    'B2C_Agent',
-                    'https://jpw--agentforce.sandbox.my.site.com/ESWB2CAgent1737056033633',
-                    {
-                        scrt2URL: 'https://jpw--agentforce.sandbox.my.salesforce-scrt.com',
-                        onInit: function(err, bootstrapResponse) {
-                            if (err) {
-                                updateStatus('Initialization Error: ' + err.message, true);
-                            } else {
-                                updateStatus('Successfully initialized');
-                            }
-                        }
-                    }
-                );
-            } catch (err) {
-                updateStatus('Setup Error: ' + err.message, true);
-            }
-        }
-
-        // Start the initialization process
-        window.onload = loadSalesforceScript;
+        // Update status when iframe loads
+        document.getElementById('chat-frame').onload = function() {
+            document.getElementById('status').textContent = 'Chat frame loaded';
+        };
     </script>
 </body>
 </html>
